@@ -1,0 +1,13 @@
+.venv/
+venv/
+*.dll
+*.pyc
+*.pyd
+__pycache__/
+*Lib/
+*site-packages/
+dataset/
+!dataset/train/
+!dataset/validation/
+history/
+my_dir/
