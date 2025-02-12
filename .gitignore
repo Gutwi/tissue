@@ -1,13 +1,10 @@
 .venv/
-venv/
 *.dll
 *.pyc
 *.pyd
 __pycache__/
-*Lib/
-*site-packages/
-dataset/
 !dataset/train/
 !dataset/validation/
+dataset/
 history/
 my_dir/
