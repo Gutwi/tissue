@@ -4,7 +4,7 @@ import keras_tuner as kt
 from keras_tuner.src.engine.hyperparameters import HyperParameters
 from keras_tuner.applications import HyperXception
 from keras.models import Sequential,Model
-from keras.layers import Dense,Flatten,Conv2D,MaxPooling2D
+from keras.layers import Dense,Flatten,Conv2D,MaxPooling2D,Dropout
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 from PIL import Image, ImageDraw, ImageFont
 
@@ -14,7 +14,7 @@ HIGHT=224    #250121
 NUM_CLASS=1 #250124
 BT_SIZE=16  #250126 もとは32
 F_STEP=16   #250130 250205:32->16
-EPC=3      #250204 epochs
+EPC=1      #250204 epochs
 
 # hp4tune=HyperParameters()
 
@@ -58,23 +58,25 @@ train_generator, validation_generator = setup_data_generators(
     validation_dir='dataset/validation'
     )
 
-# hypermodel = HyperXception(input_shape=(HIGHT,WIDTH, 3), classes=1)    #250207
+#Teigizumi model 
+# hypermodel = HyperXception(include_top=False, input_shape=(HIGHT,WIDTH, 3),classes=NUM_CLASS)    #250213
 # hp4tune = HyperParameters()
-# # hp4tune.Fixed('learning_rate', value=1e-2)
+# # # hp4tune.Fixed('learning_rate', value=1e-2)
 # modelX = hypermodel.build(hp4tune)
 
-callback = keras.callbacks.EarlyStopping(monitor='val_loss', verbose=1, patience=3)    #250210
+# # # 最終層を変更（softmax → sigmoid）   #250213
+# x = modelX.output
+# x = Flatten()(x)
+# x = Dense(128,activation="relu")(x)
+# # x = Dropout(0.5)(x)
+# prediction = Dense(1, activation="sigmoid")(x)
+# own_model = Model(inputs=modelX.input , outputs=prediction)  #250213
 
-# # 最終層を変更（softmax → sigmoid）
-# x = modelX.layers[-2].output  # 最終層の1つ手前の出力を取得
-# new_output = Dense(1, activation='sigmoid')(x)  # 2クラス分類用に1ユニットのsigmoid層を追加
-# new_model = Model(inputs=modelX.input, outputs=new_output)
-
-# new_model.summary()
+# own_model.summary()
 
 # tuner = kt.RandomSearch(  #250207
 tuner = kt.Hyperband(
-    # hypermodel,
+    # own_model,
     HyperXception(input_shape=(HIGHT,WIDTH, 3), classes=1),    #250210
     # hyperparameters=hp4tune,
     loss="binary_crossentropy", #250210
@@ -87,14 +89,16 @@ tuner = kt.Hyperband(
     overwrite=True
     )
 
-tuner.search(train_generator, epochs=EPC, validation_data=validation_generator
-,callbacks=[callback] #250210
-)    #250207
-best_hp = tuner.get_best_hyperparameters()[0]   #250130
+callback = keras.callbacks.EarlyStopping(monitor='val_loss', verbose=1, patience=3)    #250210
 
-tuner.results_summary(5)
-# best_model = tuner.get_best_models()[0]    #250130
-# # # print(best_model.summary())
+# tuner.search(train_generator, epochs=EPC, validation_data=validation_generator
+# ,callbacks=[callback] #250210
+# )    #250207
+# best_hp = tuner.get_best_hyperparameters()[0]   #250130
 
-b_model = build_model(best_hp)            #250130
-# b_model.fit(train_generator,epochs=EPC)                #250130
+# tuner.results_summary(5)
+# # best_model = tuner.get_best_models()[0]    #250130
+# # # # print(best_model.summary())
+
+# b_model = build_model(best_hp)            #250130
+# # b_model.fit(train_generator,epochs=EPC)                #250130
