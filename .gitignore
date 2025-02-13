@@ -1,4 +1,5 @@
 .venv/
+venv/
 *.dll
 *.pyc
 *.pyd
@@ -6,5 +7,4 @@ __pycache__/
 !dataset/train/
 !dataset/validation/
 dataset/
-history/
 my_dir/
