@@ -2,9 +2,9 @@ import os
 import keras
 import keras_tuner as kt
 from keras_tuner.src.engine.hyperparameters import HyperParameters
-from keras_tuner.applications import HyperXception
+from keras_tuner.src.applications import HyperXception,HyperResNet  #250214
 from keras.models import Sequential,Model
-from keras.layers import Dense,Flatten,Conv2D,MaxPooling2D,Dropout
+from keras.layers import Dense,Flatten,Conv2D,MaxPooling2D,Dropout,Input
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 from PIL import Image, ImageDraw, ImageFont
 
@@ -59,25 +59,47 @@ train_generator, validation_generator = setup_data_generators(
     )
 
 #Teigizumi model 
-# hypermodel = HyperXception(include_top=False, input_shape=(HIGHT,WIDTH, 3),classes=NUM_CLASS)    #250213
-# hp4tune = HyperParameters()
-# # # hp4tune.Fixed('learning_rate', value=1e-2)
-# modelX = hypermodel.build(hp4tune)
+input_tensor = Input(shape=(HIGHT,WIDTH, 3))
+# vgg16_model = VGG16(
+#     include_top=False, #全結合層を除外
+#     weights='imagenet', 
+#     input_tensor=input_tensor
+#     )
+# hypermodel = HyperXception(
+hypermodel = HyperResNet(
+    include_top=False,
+    # input_shape=(HIGHT,WIDTH, 3),
+    classes=NUM_CLASS,
+    input_tensor=input_tensor
+    )    #250214
+hp4tune = HyperParameters()
+# hp4tune.Fixed('learning_rate', value=1e-2)
+modelX = hypermodel.build(hp4tune)
 
-# # # 最終層を変更（softmax → sigmoid）   #250213
-# x = modelX.output
-# x = Flatten()(x)
-# x = Dense(128,activation="relu")(x)
+# 最終層を変更（softmax → sigmoid）   #250213
+#   Functional APIからSequentialへ
+# own_model = Sequential()
+# own_model.add(modelX)
+# own_model.add(hypermodel)
+x = modelX.output
+# own_model.add(Flatten() )
+x = Flatten()(x)
+x = Dense(128,activation="relu")(x)
+# own_model.add(Dense(128,activation="relu") )
 # # x = Dropout(0.5)(x)
-# prediction = Dense(1, activation="sigmoid")(x)
-# own_model = Model(inputs=modelX.input , outputs=prediction)  #250213
+prediction = Dense(1, activation="sigmoid")(x)
+# own_model.add(Dense(1, activation="sigmoid"))
+own_model = Model(inputs=modelX.input,outputs=prediction)
 
-# own_model.summary()
+own_model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
+
+own_model.summary()
 
 # tuner = kt.RandomSearch(  #250207
 tuner = kt.Hyperband(
-    # own_model,
-    HyperXception(input_shape=(HIGHT,WIDTH, 3), classes=1),    #250210
+    own_model,
+    # hypermodel,
+    # HyperXception(input_shape=(HIGHT,WIDTH, 3), classes=1),    #250210
     # hyperparameters=hp4tune,
     loss="binary_crossentropy", #250210
     objective='val_accuracy', 
