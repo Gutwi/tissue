@@ -59,18 +59,18 @@ train_generator, validation_generator = setup_data_generators(
     )
 
 #Teigizumi model 
-input_tensor = Input(shape=(HIGHT,WIDTH, 3))
+# input_tensor = Input(shape=(HIGHT,WIDTH, 3))  #250216
 # vgg16_model = VGG16(
 #     include_top=False, #全結合層を除外
 #     weights='imagenet', 
 #     input_tensor=input_tensor
 #     )
-# hypermodel = HyperXception(
-hypermodel = HyperResNet(
+hypermodel = HyperXception(
+# hypermodel = HyperResNet(
     include_top=False,
-    # input_shape=(HIGHT,WIDTH, 3),
+    input_shape=(HIGHT,WIDTH, 3),
     classes=NUM_CLASS,
-    input_tensor=input_tensor
+    # input_tensor=input_tensor #250216
     )    #250214
 hp4tune = HyperParameters()
 # hp4tune.Fixed('learning_rate', value=1e-2)
@@ -78,20 +78,19 @@ modelX = hypermodel.build(hp4tune)
 
 # 最終層を変更（softmax → sigmoid）   #250213
 #   Functional APIからSequentialへ
-# own_model = Sequential()
-# own_model.add(modelX)
+own_model = Sequential()    #250216
+own_model.add(modelX)       #250216
 # own_model.add(hypermodel)
-x = modelX.output
-# own_model.add(Flatten() )
-x = Flatten()(x)
-x = Dense(128,activation="relu")(x)
-# own_model.add(Dense(128,activation="relu") )
+# x = modelX.output
+own_model.add(Flatten() )   #250216
+# x = Flatten()(x)  #250216
+# x = Dense(128,activation="relu")(x)   #250216
+own_model.add(Dense(128,activation="relu") )
 # # x = Dropout(0.5)(x)
-prediction = Dense(1, activation="sigmoid")(x)
-# own_model.add(Dense(1, activation="sigmoid"))
-own_model = Model(inputs=modelX.input,outputs=prediction)
-
-own_model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
+# prediction = Dense(1, activation="sigmoid")(x)    #250216
+own_model.add(Dense(1, activation="sigmoid"))   #250216
+# own_model = Model(inputs=modelX.input,outputs=prediction) #250216
+own_model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy']) #250216
 
 own_model.summary()
 
