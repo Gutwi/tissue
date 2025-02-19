@@ -70,8 +70,15 @@ hlac_filters =  [np.array([[False, False, False], [False,  True, False], [False,
 
 #adaptive250219
 BINA_TH = 63
-reference_bin =  cv2.adaptiveThreshold(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,BINA_TH,0)
-target_bin =  cv2.adaptiveThreshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,BINA_TH,0)
+reference_bin =  cv2.adaptiveThreshold(
+                        cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY),
+                        255,
+                        cv2.ADAPTIVE_THRESH_MEAN_C,
+                        cv2.THRESH_BINARY+cv2.THRESH_OTSU ,
+                        BINA_TH,
+                        0
+                        )  #250219
+target_bin =  cv2.adaptiveThreshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY+cv2.THRESH_OTSU ,BINA_TH,0)    #250219
 # ADAPTIVE_THRESH_GAUSSIAN_C
 plt.imshow(reference_bin)
 plt.show()
@@ -149,7 +156,7 @@ plt.show()
 # このままでは特徴量がどの程度違うのか評価できないので、ReferenceとTargetのHLAC特徴量の内積から角度を計算してみます。
 # """
 
-def vector_angle(hv1, hv2, eps = 1e-7): #default 1e-6
+def vector_angle(hv1, hv2, eps = 1e-6): #default 1e-6
     hv1 = (hv1 + eps) / np.linalg.norm(hv1 + eps)
     hv2 = (hv2 + eps) / np.linalg.norm(hv2 + eps)
     return np.arccos(np.clip(np.dot(hv1, hv2), -1.0, 1.0))
