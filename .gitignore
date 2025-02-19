@@ -7,5 +7,5 @@ __pycache__/
 !dataset/train/
 !dataset/validation/
 dataset/
-my_dir/
+my_dir/xception_tuning
 model-fine-VGG16.keras
