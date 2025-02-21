@@ -5,39 +5,36 @@ import matplotlib.pyplot as plt
 from scipy import signal
 from concurrent.futures import ThreadPoolExecutor
 
-# cv2.imread('./my_dir/matigai/ref.jpg')
-# plt.imshow(image)
-# plt.show()
+PL_ROW=2
+PL_CLM=4
 
 """OpenCVでの画像読み込みはBGRチャネルの順番であり、MatplotlibはRGBの順番で表示されるため、色は少し変になります。これを正しく表示するためにはOpenCVで色空間を変更してもいいですが、下記のようにチャネルを逆読み込みするのが楽です。"""
-# plt.imshow(image[:,:,::-1])
-# plt.show()
-
 # r,c = image.shape[:2]
-reference = cv2.imread('./my_dir/matigai/ref.jpg')
-target = cv2.imread('./my_dir/matigai/tar_good_easy.jpg')
-# cv2.imwrite('./my_dir/matigai/reference.png', reference)    #250219
-# cv2.imwrite('./my_dir/matigai/target.png', target)          #250219
+ref_file='./my_dir/matigai/ref.jpg'
+tar_file='./my_dir/matigai/tar_good_hard.jpg'
+
+reference = cv2.imread(ref_file)
+target = cv2.imread(tar_file)
+
 # 可視化
 fig = plt.figure()
-ax = fig.add_subplot(1,2,1)
+ax = fig.add_subplot(PL_ROW,PL_CLM,1)
 ax.set_title('Reference')
 plt.imshow(reference[:,:,::-1])
-ax = fig.add_subplot(1,2,2)
-ax.set_title('Target')
+ax = fig.add_subplot(PL_ROW,PL_CLM,5)
+target_name=os.path.basename(tar_file)  #250221
+ax.set_title('Target: '+target_name)
 plt.imshow(target[:,:,::-1])
-plt.show()
 
 """# OpenCVで間違い探し
-
 OpenCVでやるならばReferenceとTargetの差分画像から検出するのが最も簡単でしょう。
 差分画像は以下のように計算できます。
 """
-
 reference_g = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY) # グレイスケールに変換
 target_g = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
 diff = cv2.absdiff(reference_g, target_g) # 差分画像を作成
 ret, diff = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU) # 差分画像を二値化
+# ret, diff = cv2.threshold(diff, 0, 255, cv2.THRESH_OTSU) # 差分画像を二値化
 diff = cv2.GaussianBlur(diff, (11, 11), 0)
 # ぼかして小さな誤検出を減らす default: 11
 # plt.imshow(diff)
@@ -63,48 +60,31 @@ hlac_filters =  [np.array([[False, False, False], [False,  True, False], [False,
 
 # """2値画像を処理する必要があるので、カラー画像を一旦グレイスケールにした後に二値化してみましょう。"""
 
-# reference_bin = cv2.threshold(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] == 255
-# target_bin = cv2.threshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] == 255
+reference_bin = cv2.threshold(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] == 255
+target_bin = cv2.threshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1] == 255
 # reference_bin = cv2.threshold(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_OTSU)[1] == 255
 # target_bin = cv2.threshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_OTSU)[1] == 255
 
 #adaptive250219
-BINA_TH = 63
-reference_bin =  cv2.adaptiveThreshold(
-                        cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY),
-                        255,
-                        cv2.ADAPTIVE_THRESH_MEAN_C,
-                        cv2.THRESH_BINARY+cv2.THRESH_OTSU ,
-                        BINA_TH,
-                        0
-                        )  #250219
-target_bin =  cv2.adaptiveThreshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY+cv2.THRESH_OTSU ,BINA_TH,0)    #250219
+# BINA_TH = 255
+# reference_bin=cv2.adaptiveThreshold(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY),255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY ,BINA_TH,0)  #250219
+# target_bin =  cv2.adaptiveThreshold(cv2.cvtColor(target, cv2.COLOR_BGR2GRAY), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY ,BINA_TH,0)    #250219
 # ADAPTIVE_THRESH_GAUSSIAN_C
+#   250220
+# fig = plt.figure()    #250221
+
+ax2 = fig.add_subplot(PL_ROW,PL_CLM,2)
+ax2.set_title('Reference')
 plt.imshow(reference_bin)
-plt.show()
+ax3 = fig.add_subplot(PL_ROW,PL_CLM,6)
+ax3.set_title('Target: '+os.path.basename(tar_file))
+plt.imshow(target_bin)
+# plt.show()
+# plt.savefig("Input_"+target_name+".png") #250221
 
 # """HLAC特徴量の計算は2次元平面における自己相関なので、マスクをラスタースキャンするような形の積和で計算できます。  
 # つまり2次元の畳み込みで計算できます。ちょっと特殊なのは、二値HLACなので出力がTrue/Falseになるよう、マスク畳み込みの後でマスクとの形状一致を評価する必要がある点に注意してください。
 # """
-
-def extract_hlac(image, hlac_filters):
-    result = []
-    image = np.uint8(image)
-    hlac_filters = np.uint8(hlac_filters)
-    for filter in hlac_filters:
-        feature_map = signal.convolve2d(image, filter, mode='valid')
-        count = np.sum(feature_map == np.sum(filter))
-        result.append(count)
-    return result
-
-# """ではさっそくHLAC特徴量を計算してみましょう。"""
-# reference_vec = extract_hlac(reference_bin, hlac_filters)
-# target_vec = extract_hlac(target_bin, hlac_filters)
-# plt.plot(reference_vec, label='Reference')
-# plt.plot(target_vec, label='Target')
-# plt.legend()
-# plt.show()
-
 # """このように、各特徴次元ごとに微妙な違いがあります。  
 # 画像に対してまとめてHLAC特徴を計算したので大した違いはありませんが、小さなパッチ単位で計算すれば更に大きな違いが見えてくるはずです。
 # """
@@ -138,19 +118,19 @@ target_hlac = extract_batchwise_hlac(target_bin, hlac_filters, nx, ny)
 print(f'Reference:\n {reference_hlac}\n')
 print(f'Target:\n {target_hlac}\n')
 
-#可視化
-fig = plt.figure()
-ax = fig.add_subplot(1,3,1)
-ax.set_title('Reference')
-plt.imshow(reference_hlac, aspect='auto', cmap='gray')
-ax = fig.add_subplot(1,3,2)
-ax.set_title('Target')
-plt.imshow(target_hlac, aspect='auto', cmap='gray')
-ax = fig.add_subplot(1,3,3)
-ax.set_title('Difference')
-plt.imshow(target_hlac-reference_hlac, aspect='auto', cmap='gray')
-fig.tight_layout()
-plt.show()
+#可視化:縦長枠内の横シマ模様
+# fig = plt.figure()
+# ax3 = fig.add_subplot(PL_ROW,PL_CLM,5)
+# ax3.set_title('Reference')
+# plt.imshow(reference_hlac, aspect='auto', cmap='gray')
+# ax3 = fig.add_subplot(PL_ROW,PL_CLM,6)
+# ax3.set_title('Target: '+os.path.basename(tar_file))
+# plt.imshow(target_hlac, aspect='auto', cmap='gray')
+# ax3 = fig.add_subplot(PL_ROW,PL_CLM,7)
+# ax3.set_title('Difference')
+# plt.imshow(target_hlac-reference_hlac, aspect='auto', cmap='gray')
+# fig.tight_layout()
+# plt.show()
 
 # """上記の可視化は特徴ベクトルを並べて可視化したもので、1行が1パッチのHLAC特徴量に対応しています。  
 # このままでは特徴量がどの程度違うのか評価できないので、ReferenceとTargetのHLAC特徴量の内積から角度を計算してみます。
@@ -162,10 +142,11 @@ def vector_angle(hv1, hv2, eps = 1e-6): #default 1e-6
     return np.arccos(np.clip(np.dot(hv1, hv2), -1.0, 1.0))
 
 # """上記の関数を用いてパッチごとの角度をプロットすると"""
-
 hlac_angles = [vector_angle(rv, tv) for rv, tv in zip(reference_hlac, target_hlac)]
+# fig = plt.figure()  #250221
+ax3 = fig.add_subplot(PL_ROW,PL_CLM,3)  #250221
 plt.plot(hlac_angles)
-plt.show()
+# plt.show()
 
 # """このようにパッチ単位の差をきれいに可視化できます。  
 # 最後に、この情報を元に異常部位を可視化してみましょう！
@@ -190,8 +171,8 @@ def visualize(image, hlac_angles, nx, ny, th=0.1):
     return cv2.addWeighted(image, 0.2, dst, 0.8, 1.0)
 
 out = visualize(reference, hlac_angles, nx, ny)
-plt.imshow(out[:, :, ::-1])
-plt.show()
+# plt.imshow(out[:, :, ::-1])
+# plt.show()
 
 # """OpenCVと同じような結果が得られると思いますが、HLAC特徴量では差のある部分を緑の輝度で表現することで、特に違いが大きい部分というのも分かると思います。  
 # 当然、差分画像でも差の程度は可視化できますが、それは輝度差でしかありません。  
@@ -199,13 +180,16 @@ plt.show()
 # 最後に差分画像とHLAC特徴量による結果をまとめて結びとします。
 # """
 
-fig = plt.figure()
-ax = fig.add_subplot(1,2,1)
-ax.set_title('Difference based result')
+# fig = plt.figure()
+ax4 = fig.add_subplot(PL_ROW,PL_CLM,4)
+ax4.set_title('Difference based result')
 plt.imshow(dst[:,:,::-1])
-ax = fig.add_subplot(1,2,2)
-ax.set_title('HLAC based result')
+ax4 = fig.add_subplot(PL_ROW,PL_CLM,8)
+ax4.set_title('HLAC based result')
 plt.imshow(out[:,:,::-1])
 fig.set_figheight(4)
 fig.set_figwidth(8)
+fig.suptitle(os.path.basename(tar_file))  #250220
+fig.set_size_inches(12, 8)  #250221
+plt.savefig("./my_dir/matigai/Input_"+target_name+".png") #250221
 plt.show()
