@@ -11,7 +11,7 @@ PL_CLM=4
 """OpenCVでの画像読み込みはBGRチャネルの順番であり、MatplotlibはRGBの順番で表示されるため、色は少し変になります。これを正しく表示するためにはOpenCVで色空間を変更してもいいですが、下記のようにチャネルを逆読み込みするのが楽です。"""
 # r,c = image.shape[:2]
 ref_file='./my_dir/matigai/ref.jpg'
-tar_file='./my_dir/matigai/tar_good_hard.jpg'
+tar_file='./my_dir/matigai/tar_bad_easy.jpg'
 
 reference = cv2.imread(ref_file)
 target = cv2.imread(tar_file)
