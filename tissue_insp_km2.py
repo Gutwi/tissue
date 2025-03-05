@@ -13,7 +13,7 @@ NUM_CLUSTERS = 3  # k-means で分類する色の数
 MODEL_PATH = "tissue_orientation_model.h5"  # 事前学習済みの向き判定モデル
 
 def get_dominant_colors(image, k=2):
-    """ 画像の主要な2色を取得（白色を除外） """
+    """ 画像の主要な2色を取得（白色は調整中） """
     pixels = image.reshape(-1, 3)
     
     # K-meansクラスタリング
@@ -21,11 +21,15 @@ def get_dominant_colors(image, k=2):
     labels = kmeans.fit_predict(pixels)
     colors = kmeans.cluster_centers_.astype(int)
 
-    # 白色に近いクラスタを背景とみなして除外
-    brightness = np.sum(colors, axis=1)  # RGB値の合計（白に近いほど大きい）
-    sorted_indices = np.argsort(brightness)  # 明るさでソート（暗い色を優先）
+    # 白色に近いクラスタを背景とみなして除外   #250305
+    # brightness = np.sum(colors, axis=1)  # RGB値の合計（白に近いほど大きい）
+    # sorted_indices = np.argsort(brightness)  # 明るさでソート（暗い色を優先）
 
-    return colors[sorted_indices[:2]]  # 上位2色を返す
+    counts = np.bincount(labels)    #250305
+    main_color = colors[np.argmax(counts)]  # 最も多い色 を主要色とする
+    
+    return tuple(main_color)    #250305
+    # return colors[sorted_indices[:2]]  # 上位2色を返す
 
 def check_tissue_order(image):
     """ ティッシュの上下の色ペアを取得し、並び順をチェック """
@@ -69,7 +73,9 @@ def check_tissue_order(image):
         top_color = get_dominant_colors(top_half)         #250304
         bottom_color = get_dominant_colors(bottom_half)   #250304
 
-        detected_colors.append((tuple(top_color[0]), tuple(bottom_color[0])))
+        # detected_colors.append((tuple(top_color[0]), tuple(bottom_color[0])))
+        detected_colors.append((top_color, bottom_color))  # 1ペアのみ記録    #250305
+
 
     # 正しい順番（黄緑/白、水色/白、紺色/白）と比較
     correct_order = [
@@ -111,7 +117,7 @@ def inspect_tissue(image_path):
 
     # 結果を描画
     result_text = f"Order Error: {error}" #250303, 向き: {orientation}"
-    cv2.putText(image, result_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    imgcv2=cv2.putText(image, result_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.rectangle(image, (W_L_EG, H_T_EG), (W_R_EG, H_B_EG), (255, 0, 0))         #250304
     cv2.line(image,( W_L_EG+TIS_W//3, H_T_EG),(W_L_EG+TIS_W//3,H_B_EG ),(0,255,0))
     cv2.line(image,(W_R_EG-TIS_W//3, H_T_EG),(W_R_EG-TIS_W//3,H_B_EG),(0,0,255))
@@ -132,7 +138,7 @@ H_T_EG = 115
 H_B_EG = H_T_EG + TIS_H
 
 # 画像を検査
-image_path = "test_good2.jpg"  # テスト画像
+image_path = "test_good1.jpg"  # テスト画像
 inspect_tissue(image_path)
 
 # rgb = ((100, 50, 0), (200, 100, 50))
