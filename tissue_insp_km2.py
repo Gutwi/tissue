@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 IMG_WIDTH, IMG_HEIGHT = 1024, 576
 NUM_CLUSTERS = 2  # k-means で分類する色の数
 MODEL_PATH = "tissue_orientation_model.h5"  # 事前学習済みの向き判定モデル
-DIST_TH = 200
+DIST_TH = 100
 # 正しい順番（黄緑/白、水色/白、紺色/白）と比較  250306
 CORRECT_ORDER = [
     ((120, 200, 185), (230, 230, 230)),  # 黄緑/白
@@ -24,7 +24,7 @@ def get_dominant_colors(image, k=NUM_CLUSTERS):
     pixels = image.reshape(-1, 3)
     
     # K-meansクラスタリング
-    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans = KMeans(n_clusters=k, random_state=42, verbose=1, n_init=10)
     labels = kmeans.fit_predict(pixels)
     colors = kmeans.cluster_centers_.astype(int)
 
@@ -40,16 +40,6 @@ def get_dominant_colors(image, k=NUM_CLUSTERS):
 
 def check_tissue_order(image):
     """ ティッシュの上下の色ペアを取得し、並び順をチェック """
-    # h, w, _ = image.shape
-    # third_w = w // 3
-    # half_h = h // 2  # 上下分割   #250304
-
-    # tissues = [
-    #     image[:, 0:third_w],       # 左
-    #     image[:, third_w:2*third_w],  # 中央
-    #     image[:, 2*third_w:w]      # 右
-    # ]
-
     h, w = TIS_H, TIS_W
     third_w = w // 3
     # half_h = h // 2  # 上下分割
@@ -93,6 +83,7 @@ def check_tissue_order(image):
 
     # error = detected_colors != correct_order
     error = sum(np.linalg.norm(np.array(detected_colors) - np.array(CORRECT_ORDER), axis=1))
+    error = np.linalg.norm(error)
 
     return error, detected_colors
 
@@ -109,27 +100,23 @@ def inspect_tissue(image_path):
     # 画像を読み込んで判定
     # image_resized = cv2.resize(image, (1024, 576))
     error_num, detected_colors = check_tissue_order(image_bgr)  #250306
-    # error = error_num > DIST_TH     #250306
+    error = error_num > DIST_TH     #250307
 
-    print("並び順エラー値:", error_num)
-    # print("並び順 判定:", error)
     print("検出された色ペア:", convert_tuple(detected_colors) )   #250304
 
+    #正規化(plt表示用)
     color = np.array(convert_tuple(detected_colors), dtype=float) / 255
-    flat_color = np.array(color).reshape(-1,3)    #250304
-    # print("検出された色ペア:",flat_color)
-
     crct_order = np.array(convert_tuple(CORRECT_ORDER), dtype=float) / 255
+
+    #配列を1次元に
+    flat_color = np.array(color).reshape(-1,3)    #250304
     flat_crct_order = np.array(crct_order).reshape(-1,3)    #250304
 
+    #BGR->RGB(plt表示用)
     flat_crct_order_rgb = flat_crct_order[:,[2,1,0]]         #250306
     flat_color_rgb = flat_color[:,[2,1,0]]         #250306
 
-    # 画像として表示
-    # plt.imshow([flat_color_rgb])  # 1行の画像として表示    #250304
-    # plt.axis("off")  # 軸を非表示
-    # plt.show()
-
+    # 結果を描画
     fig, ax = plt.subplots(3, 1, figsize=(8, 10))       #250306
     ax[0].imshow([flat_crct_order_rgb])  # 1行の画像として表示    #250304
     ax[0].axis("off")  # 軸を非表示
@@ -141,8 +128,15 @@ def inspect_tissue(image_path):
     ax[1].set_title("Detected Color")
     ax[1].set_position([0.2,0.4,0.6,0.6])
 
-    # 結果を描画
-    result_text = f"Order Error: {error_num}" #250303, 向き: {orientation}"
+    if error_num > DIST_TH:
+        error = "NG"
+    else:
+        error = "OK"
+
+    print("並び順エラー値:", error_num)
+    print("並び順 判定:", error)
+
+    result_text = f"Order Error Value: {error_num} | Result: {error}" #250303, 向き: {orientation}"
     imgcv2=cv2.putText(image_bgr, result_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     img_rec=cv2.rectangle(image_bgr, (W_L_EG, H_T_EG), (W_R_EG, H_B_EG), (255, 0, 0))         #250304
@@ -154,11 +148,11 @@ def inspect_tissue(image_path):
     ax[2].imshow(img_lin1)
     ax[2].imshow(img_lin2)
     ax[2].imshow(image_bgr[:, :, [2,1,0]])
-    ax[2].set_title("Inspection Result")
+    ax[2].set_title("Inspection Result: "+target_name)
     ax[2].axis("off")
     ax[2].set_position([0.1,0,0.8,0.8])
     
-    plt.savefig("./my_dir/tis_insp/res_"+target_name+".png") #250221
+    # plt.savefig("./my_dir/tis_insp/res_"+target_name+".png") #250221
     plt.show()
 
 # 入れ子タプルをNp.int64など型表示をなくす処理
@@ -173,5 +167,5 @@ H_T_EG = 115
 H_B_EG = H_T_EG + TIS_H
 
 # 画像を検査
-image_path = "./my_dir/tis_insp/Input/test_bad2.jpg"  # テスト画像
+image_path = "./my_dir/tis_insp/Input/test_bad4.jpg"  # テスト画像
 inspect_tissue(image_path)
