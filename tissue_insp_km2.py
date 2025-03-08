@@ -24,7 +24,7 @@ def get_dominant_colors(image, k=NUM_CLUSTERS):
     pixels = image.reshape(-1, 3)
     
     # K-meansクラスタリング
-    kmeans = KMeans(n_clusters=k, random_state=42, verbose=1, n_init=10)
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=5)   #詳細表示verbose=1,
     labels = kmeans.fit_predict(pixels)
     colors = kmeans.cluster_centers_.astype(int)
 
@@ -73,13 +73,6 @@ def check_tissue_order(image):
         # detected_colors.append((tuple(top_color[0]), tuple(bottom_color[0])))
         detected_colors.append((top_color, bottom_color))  # 1ペアのみ記録    #250305
 
-
-    # 正しい順番（黄緑/白、水色/白、紺色/白）と比較
-    # correct_order = [
-    #     ((120, 200, 185), (230, 230, 230)),  # 黄緑/白
-    #     ((155, 170, 55), (230, 230, 230)),  # 水色/白
-    #     ((105, 45, 30), (230, 230, 230))     # 紺色/白
-    # ]
 
     # error = detected_colors != correct_order
     error = sum(np.linalg.norm(np.array(detected_colors) - np.array(CORRECT_ORDER), axis=1))
@@ -159,6 +152,7 @@ def inspect_tissue(image_path):
 def convert_tuple(tpl):
     return tuple(convert_tuple(x) if isinstance(x, tuple) else int(x) for x in tpl)
 
+#領域サイズ・座標
 TIS_W = 710
 TIS_H = 355
 W_L_EG = 195
@@ -167,5 +161,5 @@ H_T_EG = 115
 H_B_EG = H_T_EG + TIS_H
 
 # 画像を検査
-image_path = "./my_dir/tis_insp/Input/test_bad4.jpg"  # テスト画像
+image_path = "./my_dir/tis_insp/Input/test_good4.jpg"  # テスト画像
 inspect_tissue(image_path)
