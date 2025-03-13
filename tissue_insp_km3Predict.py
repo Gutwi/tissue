@@ -13,7 +13,7 @@ MODEL_PATH = "model_km3_Cdora.pkl"  # 事前学習済みの正解モデル
 DIST_TH = 100   # OK/NG判定基準
 
 # 検査する画像（入力）
-IMAGE_PATH = "./my_dir/tis_insp/Input/test_dra2.jpg"  # テスト画像
+IMAGE_PATH = "./my_dir/tis_insp/Input/test_dra4.jpg"  # テスト画像
 
 # 正しい順番（黄緑/白、水色/白、紺色/白）と比較  250306
 CORRECT_ORDER = [
