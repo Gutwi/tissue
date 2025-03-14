@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import pickle
-import pygame
 
 # 正しい順番（黄緑/白、水色/白、紺色/白）と比較  250306
 CORRECT_ORDER = [
@@ -16,6 +15,7 @@ CORRECT_ORDER = [
 ]
 
 DIST_TH = 125   # OK/NG判定基準
+
 #ティッシュ色領域サイズ・座標
 TIS_W = 710
 TIS_H = 355
@@ -23,20 +23,9 @@ W_L_EG = 195
 W_R_EG = W_L_EG + TIS_W
 H_T_EG = 115
 H_B_EG = H_T_EG + TIS_H
-DIF_TH = 50    #処理の実行判別用 画面差分しきい値 250314
-
-#音の再生初期化
-pygame.mixer.init()
-ok_sound = pygame.mixer.Sound("OK.mp3")
-error_sound = pygame.mixer.Sound("NG.mp3")
-
-def play_sound(sound):
-    """ 即座に音を再生 """
-    sound.play()
-
 
 # 学習済みモデルをロード
-with open("model_km3_Cdora2.pkl", "rb") as f:
+with open("model_km3_Cdora.pkl", "rb") as f:
     kmeans = pickle.load(f)
 
 def get_dominant_colors(image):
@@ -99,16 +88,6 @@ cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1024)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 576)
 
-# 初期フレーム    250314
-ret, prev_frame = cap.read()
-if not ret:
-    print("カメラが検出できません")
-    cap.release()
-    cv2.destroyAllWindows()
-    exit()
-
-prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)  #250314
-
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -116,35 +95,22 @@ while True:
 
     # 画像をリサイズ
     frame_resized = cv2.resize(frame, (1024, 576))
+    # normalized = frame_resized / 255.0
 
-    # グレースケール変換して変化を検出  250314
-    gray = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2GRAY)
-    diff = cv2.absdiff(prev_gray, gray)
-    diff_score = np.sum(diff) / (1024 * 576)  # 画面の変化度合い
+    # 並び順判定
+    # error, detected_colors = check_tissue_order(normalized)
+    error, detected_colors = check_tissue_order(frame_resized)
 
-    # 変化が一定以上 or "s" キーが押されたら処理
-    # if cv2.waitKey(1) & 0xFF == ord("s"):
-    if diff_score > DIF_TH or cv2.waitKey(1) & 0xFF == ord("s"):
+    print("エラー値： ",error)
 
-        # 並び順判定
-        error, detected_colors = check_tissue_order(frame_resized)
-        
-        if error < DIST_TH:
-            text = "OK" 
-            color = (0, 255, 0)
-            play_sound(ok_sound)  # 正解ならOK音
-        else :
-            text = "NG"
-            color = (0, 0, 255)
-            play_sound(error_sound)  # エラーならエラー音
+    # 結果を画面に表示
+    text = "OK" if error < DIST_TH else "NG"
+    color = (0, 255, 0) if not error else (0, 0, 255)
+    cv2.putText(frame_resized, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-        # 結果を画面に表示
-        cv2.putText(frame_resized, text, (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 4)
-        prev_gray = gray.copy()  # フレームを更新
-        print("エラー値： ",error)
-
-        # ウィンドウに表示
-        cv2.imshow("Tissue Inspection", frame_resized)
+    # ウィンドウに表示
+    cv2.imshow("Tissue Inspection", frame_resized)
+    # cv2.imshow("Tissue Inspection", frame)
 
     # "q"キーで終了
     if cv2.waitKey(1) & 0xFF == ord("q"):

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 # 定数設定
 IMG_WIDTH, IMG_HEIGHT = 1024, 576
-MODEL_PATH = "model_km3_Cdora.pkl"  # 事前学習済みの正解モデル
+MODEL_PATH = "model_km3_Cdora2.pkl"  # 事前学習済みの正解モデル
 NUM_CLUSTERS = 2  # k-means で分類する色の数
 
 #ティッシュ色領域サイズ・座標
